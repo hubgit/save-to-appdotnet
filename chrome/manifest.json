@@ -1,0 +1,34 @@
+{
+   "background": {
+      "persistent": false,
+      "scripts": [ "events.js" ]
+   },
+   "browser_action": {
+      "default_icon": "img/icon16.png",
+      "default_title": "Save the current page to app.net"
+   },
+   "commands": {
+      "save": {
+         "description": "Save the current page to app.net",
+         "suggested_key": {
+            "default": "Alt+A"
+         }
+      }
+   },
+   "description": "Save the current page to app.net",
+   "icons": {
+      "128": "img/icon128.png",
+      "16": "img/icon16.png",
+      "48": "img/icon48.png"
+   },
+   "manifest_version": 2,
+   "name": "Save to app.net",
+   "permissions": [ 
+      "tabs", 
+      "http://*/*", 
+      "https://*/*", 
+      "storage",
+      "experimental"
+   ],
+   "version": "0.1"
+}
