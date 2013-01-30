@@ -103,7 +103,7 @@ var createPost = function(file) {
 		text: [title, config.data.url].join(" "),
 		annotations: [
 			{
-				type: "com.metatato.article",
+				type: "com.example.article",
 				value: config.data
 			}
 		]
