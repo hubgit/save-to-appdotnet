@@ -1,9 +1,9 @@
-Save to app.net
+Save to App.net
 ===============
 
-Posts the current URL and title, with metadata annotation and file attachment, to app.net.
+Posts the current URL and title, with metadata annotation and file attachment, to App.net.
 
-Chrome extension => click button => extracts citation_* metadata => fetches PDF => creates app.net file => creates app.net post with file attached.
+Chrome extension => click button => extracts citation_* metadata => fetches PDF => creates App.net file => creates App.net post with file attached.
 
 *work in progress*
 
