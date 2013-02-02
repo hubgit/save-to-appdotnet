@@ -1,4 +1,8 @@
 var absoluteURL = function(url) {
+	if (!url) {
+		return;
+	}
+
 	var a = document.createElement("a");
 	a.setAttribute("href", url);
 
@@ -6,7 +10,7 @@ var absoluteURL = function(url) {
 };
 
 var detectPDF = function() {
-	var nodes;
+	var nodes, node, href;
 
 	nodes = document.querySelectorAll("link[rel='alternate'][type='application/pdf'][href]");
 
@@ -22,20 +26,18 @@ var detectPDF = function() {
 
 	var nodes = document.querySelectorAll("a[href]");
 
-	for (var i = 0; i < nodes.length; i++) {
-		var node = nodes[i];
-		var href = node.getAttribute("href");
+	[/\.pdf$/i, /\.pdf/i, /pdf/i].forEach(function(re) {
+		for (var i = 0; i < nodes.length; i++) {
+			href = nodes[i].getAttribute("href");
 
-		if (href.match(/pdf/i)) {
-			return href;
+			if (href.match(re)) {
+				return href;
+			}
 		}
-	}
+	});
 
 	for (var i = 0; i < nodes.length; i++) {
-		var node = nodes[i];
-		var text = node.textContent;
-
-		if (text.match(/pdf/i)) {
+		if (nodes[i].textContent.match(/pdf/i)) {
 			return href;
 		}
 	}
