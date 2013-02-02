@@ -1,73 +1,54 @@
 var config = {
 	client_id: "8rpu34tDFqbAmkmJhPYkSCkDFg2vc7XT",
-	redirect_uri: "http://metatato.com/appdotnet/oauth", // TODO: actual chrome:extension/ URI
-	state: "", // TODO
+	redirect_uri: "http://bitly.com/robots.txt",
+	//state: "", // TODO
 	token: null,
-	data: {},
 };
 
-// TODO: don't hard-code the access token
-window.localStorage.setItem("token", "");
-
-var getAccessToken = function() {
-	var data = {
-		client_id: config.client_id,
-		response_type: "token",
-		redirect_uri: config.redirect_uri,
-		scope: "write_post,files,stream",
-		state: config.state
-	};
-
-	window.open("https://account.app.net/oauth/authenticate?" + buildQueryString(data));
-
-	// TODO: capture the access token from the redirect_uri
-};
+var itemData = {};
 
 var execute = function() {
-	config.token = window.localStorage.getItem("token");
+	chrome.tabs.executeScript(null, { file: "extract.js" }, function(result) {
+		itemData = result[0];
+		console.log(itemData);
 
-	if (config.token) {
-		chrome.tabs.executeScript(null, { file: "extract.js" }, function(result) {
-			config.data = result[0];
-			console.log(config.data);
-
-			if (config.data.pdf_url) {
-				fetchFile();
-			} else {
-				createPost(null);
-			}
-		});
-	} else {
-		getAccessToken();
-	}
+		getToken();
+	});
 };
 
 var fetchFile = function() {
-	console.log("Fetching PDF: " + config.data.pdf_url);
+	console.log("Fetching PDF: " + itemData.pdf_url);
 
 	var xhr = new XMLHttpRequest;
-	xhr.open("GET", config.data.pdf_url, true);
+	xhr.open("GET", itemData.pdf_url, true);
 	xhr.responseType = "arraybuffer";
 	xhr.onload = createFile;
-	xhr.onerror = handleXHRError;
+	xhr.onerror = function() {
+		createPost(null);
+	};
 	xhr.send();
 };
 
 var createFile = function(event) {
 	if (this.readyState == 4 && this.status == 200) {
+		var contentType = this.getResponseHeader("Content-Type").split(/\s*;\s*/)[0];
+
 		console.log("Received PDF");
 		console.log("Byte length: " + this.response.byteLength);
-		console.log("Content-Type: " + this.getResponseHeader("Content-Type"));
+		console.log("Content-Type: " + contentType);
 		console.log("Content-Length: " + this.getResponseHeader("Content-Length"));
 
-		if (this.getResponseHeader("Content-Type") !== "application/pdf") {
-			return;
+		if (contentType !== "application/pdf") {
+			if (!confirm("The file's type is " + contentType + ". Attach it anyway?")) {
+				createPost(null);
+				return;
+			}
 		}
 
 		var formData = new FormData;
 
 		var dataView = new DataView(this.response);
-		var blob = new Blob([dataView], { type: "application/pdf" });
+		var blob = new Blob([dataView], { type: contentType });
 		formData.append("content", blob, "article.pdf");
 
 		var blob = new Blob([JSON.stringify({ type: "com.adobe.pdf" })], { type: "application/json" });
@@ -96,15 +77,15 @@ var handleFileLoad = function(event) {
 };
 
 var createPost = function(file) {
-	var title = config.data.title;
+	var title = itemData.title;
 	console.log("Creating post: " + title);
 
 	var data = {
-		text: [title, config.data.url].join(" "),
+		text: [title, itemData.url].join(" "),
 		annotations: [
 			{
-				type: "com.metatato.article",
-				value: config.data
+				type: "edu.stanford.highwire.article",
+				value: itemData
 			}
 		]
 	};
@@ -148,6 +129,8 @@ var handlePostLoad = function() {
 
 var handleXHRError = function(event){
 	console.log(["error", event]);
+
+	// TODO: authenticate if error code is 403
 };
 
 var buildQueryString = function(items) {
@@ -175,10 +158,47 @@ var buildQueryString = function(items) {
 	return parts.length ? parts.join("&").replace(/%20/g, "+") : "";
 };
 
-/* when the toolbar button is clicked */
-chrome.browserAction.onClicked.addListener(execute);
+var addEventListeners = function() {
+	/* when the toolbar button is clicked */
+	chrome.browserAction.onClicked.addListener(execute);
 
-/* when the keyboard shortcut is pressed */
-chrome.commands.onCommand.addListener(function(command) {
-  if (command == "save") execute();
-});
+	/* when the keyboard shortcut is pressed */
+	chrome.commands.onCommand.addListener(function(command) {
+	  if (command == "save") execute();
+	});
+};
+
+var getToken = function() {
+	chrome.storage.sync.get("token", checkToken);
+};
+
+var checkToken = function(result) {
+	console.log(result);
+	if (result.token) {
+		config.token = result.token;
+
+		if (itemData) {
+			if (itemData.pdf_url) {
+				fetchFile();
+			} else {
+				createPost(null);
+			}
+		}
+	} else {
+		authenticate();
+	}
+};
+
+var authenticate = function() {
+	var data = {
+		client_id: config.client_id,
+		response_type: "token",
+		redirect_uri: config.redirect_uri,
+		scope: "write_post",
+		//state: config.state
+	};
+
+	window.open("https://account.app.net/oauth/authenticate?" + buildQueryString(data));
+};
+
+addEventListeners();

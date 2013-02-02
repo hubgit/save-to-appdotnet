@@ -1,8 +1,9 @@
 var absoluteURL = function(url) {
-	var node = document.createElement("a");
+	var a = document.createElement("a");
 	a.setAttribute("href", url);
+
 	return a.href;
-}
+};
 
 var detectPDF = function() {
 	var nodes;
@@ -38,7 +39,7 @@ var detectPDF = function() {
 			return href;
 		}
 	}
-}
+};
 
 var detectMeta = function() {
 	var data = {};
@@ -62,7 +63,7 @@ var detectMeta = function() {
 	delete data.reference; // too large
 
 	return data;
-}
+};
 
 var data = detectMeta();
 
@@ -71,10 +72,17 @@ if (!data.title) {
 }
 
 data.url = document.location.href;
-data.pdf_url = detectPDF();
+data.pdf_url = absoluteURL(detectPDF());
+
+if (data.doi) {
+	data.doi = data.doi.replace(/^doi:/, "");
+}
 
 var selection = document.getSelection().toString();
-data.quote = selection ? '"' + selection + '"' : "";
+//data.quote = selection ? '"' + selection + '"' : "";
+if (selection.length) {
+	data.quote = selection;
+}
 
 //data.tags = prompt("tags", "bookmark");
 

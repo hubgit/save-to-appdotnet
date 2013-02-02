@@ -30,5 +30,12 @@
       "storage",
       "experimental"
    ],
-   "version": "0.1"
+   "version": "0.1",
+   "content_scripts": [
+     {
+       "matches": ["http://bitly.com/robots.txt"],
+       "js": ["oauth.js"],
+       "run_at": "document_start"
+     }
+   ]
 }
