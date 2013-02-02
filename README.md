@@ -8,4 +8,6 @@ Chrome extension => click button => extracts citation_* metadata => fetches PDF 
 *work in progress*
 
 TODO:
-Actual OAuth2 authentication.
+Progress indicator
+Handle errors
+Notes + tags?
