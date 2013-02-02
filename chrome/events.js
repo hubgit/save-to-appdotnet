@@ -5,103 +5,118 @@ var config = {
 	token: null,
 };
 
-var itemData = {};
-
 var execute = function() {
 	chrome.tabs.executeScript(null, { file: "extract.js" }, function(result) {
-		itemData = result[0];
+		var itemData = result[0];
 		console.log(itemData);
 
-		getToken();
+		getToken(function() {
+			if (itemData.pdf_url) {
+				fetchFile(itemData);
+			} else {
+				createPost(itemData, null);
+			}
+		});
 	});
 };
 
-var fetchFile = function() {
+var fetchFile = function(itemData) {
 	console.log("Fetching PDF: " + itemData.pdf_url);
 
 	var xhr = new XMLHttpRequest;
 	xhr.open("GET", itemData.pdf_url, true);
 	xhr.responseType = "arraybuffer";
-	xhr.onload = createFile;
+	xhr.onload = function() {
+		if (this.readyState == 4 && this.status == 200) {
+			createFile(this, itemData);
+		}
+	};
 	xhr.onerror = function() {
-		createPost(null);
+		createPost(itemData, null);
 	};
 	xhr.send();
 };
 
-var createFile = function(event) {
-	if (this.readyState == 4 && this.status == 200) {
-		var contentType = this.getResponseHeader("Content-Type").split(/\s*;\s*/)[0];
+var createFile = function(xhr, itemData) {
+	var contentType = xhr.getResponseHeader("Content-Type").split(/\s*;\s*/)[0];
+	var contentLength = xhr.getResponseHeader("Content-Length");
 
-		console.log("Received PDF");
-		console.log("Byte length: " + this.response.byteLength);
-		console.log("Content-Type: " + contentType);
-		console.log("Content-Length: " + this.getResponseHeader("Content-Length"));
+	console.log("Received PDF");
+	console.log("Byte length: " + xhr.response.byteLength);
+	console.log("Content-Type: " + contentType);
+	console.log("Content-Length: " + contentLength);
 
-		if (contentType !== "application/pdf") {
-			if (!confirm("The file's type is " + contentType + ". Attach it anyway?")) {
-				createPost(null);
-				return;
-			}
+	if (contentType !== "application/pdf") {
+		if (!confirm("The file's type is " + contentType + ". Attach it anyway?")) {
+			createPost(itemData, null);
+			return;
 		}
-
-		var formData = new FormData;
-
-		var dataView = new DataView(this.response);
-		var blob = new Blob([dataView], { type: contentType });
-		formData.append("content", blob, "article.pdf");
-
-		var blob = new Blob([JSON.stringify({ type: "com.adobe.pdf" })], { type: "application/json" });
-		formData.append("metadata", blob, "metadata.json");
-
-		var xhr = new XMLHttpRequest;
-		xhr.open("POST", "https://alpha-api.app.net/stream/0/files", true);
-		xhr.setRequestHeader("Authorization", "Bearer " + config.token);
-		xhr.onload = handleFileLoad;
-		xhr.onerror = handleXHRError;
-		xhr.send(formData);
 	}
+
+	var formData = new FormData;
+
+	var dataView = new DataView(xhr.response);
+	var blob = new Blob([dataView], { type: contentType });
+	formData.append("content", blob, "article.pdf");
+
+	var blob = new Blob([JSON.stringify({ type: "com.adobe.pdf" })], { type: "application/json" });
+	formData.append("metadata", blob, "metadata.json");
+
+	var xhr = new XMLHttpRequest;
+	xhr.open("POST", "https://alpha-api.app.net/stream/0/files", true);
+	xhr.setRequestHeader("Authorization", "Bearer " + config.token);
+	xhr.onload = function() {
+		if (this.readyState == 4 && this.status == 200) {
+			var response = JSON.parse(this.response);
+
+			createPost(itemData, {
+				id: response.data.id,
+				token: response.data.file_token
+			});
+		}
+	};
+	xhr.onerror = handleXHRError;
+	xhr.send(formData);
 };
 
-var handleFileLoad = function(event) {
-	if (this.readyState == 4 && this.status == 200) {
-		var response = JSON.parse(this.response);
-
-		var file = {
-			id: response.data.id,
-			token: response.data.file_token
-		};
-
-		createPost(file);
-	}
-};
-
-var createPost = function(file) {
+var createPost = function(itemData, file) {
 	var title = itemData.title;
-	console.log("Creating post: " + title);
+
+	if (title > 256) {
+		title = title.substr(0, 255 + "…");
+	}
 
 	var data = {
-		text: [title, itemData.url].join(" "),
+		text: title,
 		annotations: [
 			{
 				type: "edu.stanford.highwire.article",
 				value: itemData
 			}
-		]
+		],
+		entities: {
+			links: [
+				{
+					pos: 0,
+					len: title.length,
+					url: itemData.url
+				}
+			]
+		}
 	};
 
 	if (file) {
 		data.annotations.push({
-		    "type": "net.app.core.attachments",
-		    "value": {
-		        "+net.app.core.file_list": [
-			        {
-			        	"file_id": file.id,
-		                "file_token": file.token,
-		                "format": "metadata" // ?
-		            }
-	            ],
-		    }
+			"type": "net.app.core.attachments",
+			"value": {
+				"+net.app.core.file_list": [
+					{
+						"file_id": file.id,
+						"file_token": file.token,
+						"format": "metadata" // ?
+					}
+				],
+			}
 		});
 	}
 
@@ -111,25 +126,24 @@ var createPost = function(file) {
 	xhr.open("POST", "https://alpha-api.app.net/stream/0/posts?include_post_annotations=1", true);
 	xhr.setRequestHeader("Content-Type", "application/json; charset=utf-8");
 	xhr.setRequestHeader("Authorization", "Bearer " + config.token);
-	xhr.onload = handlePostLoad;
+	xhr.onload = function() {
+		if (this.readyState == 4 && this.status == 200) {
+			var response = JSON.parse(this.response);
+			showPost(response.data);
+		}
+	};
 	xhr.onerror = handleXHRError;
 	xhr.send(JSON.stringify(data));
 };
 
-var handlePostLoad = function() {
-	console.log(this);
-	if (this.readyState == 4 && this.status == 200) {
-		var response = JSON.parse(this.response);
-		console.log(response);
-
-		console.log("Created post: " + response.data.canonical_url);
-		window.open(response.data.canonical_url);
-	}
+var showPost = function(data) {
+		console.log(data);
+		console.log("Created post: " + data.canonical_url);
+		window.open(data.canonical_url);
 };
 
 var handleXHRError = function(event){
 	console.log(["error", event]);
-
 	// TODO: authenticate if error code is 403
 };
 
@@ -143,16 +157,16 @@ var buildQueryString = function(items) {
 	for (var key in items) {
 		if (!items.hasOwnProperty(key)) continue;
 
-   		var obj = items[key];
+		var obj = items[key];
 
-   		if (Array.isArray(obj)) {
-   			obj.forEach(function(value) {
-   				add(key, value);
-   			});
-   		}
-   		else {
-   			add(key, obj);
-   		}
+		if (Array.isArray(obj)) {
+			obj.forEach(function(value) {
+				add(key, value);
+			});
+		}
+		else {
+			add(key, obj);
+		}
 	}
 
 	return parts.length ? parts.join("&").replace(/%20/g, "+") : "";
@@ -168,26 +182,18 @@ var addEventListeners = function() {
 	});
 };
 
-var getToken = function() {
-	chrome.storage.sync.get("token", checkToken);
-};
-
-var checkToken = function(result) {
-	console.log(result);
-	if (result.token) {
-		config.token = result.token;
-
-		if (itemData) {
-			if (itemData.pdf_url) {
-				fetchFile();
-			} else {
-				createPost(null);
-			}
+var getToken = function(callback) {
+	chrome.storage.sync.get("token", function(result) {
+		console.log(result);
+		if (result.token) {
+			config.token = result.token;
+			callback();
+		} else {
+			authenticate();
 		}
-	} else {
-		authenticate();
-	}
+	});
 };
+
 
 var authenticate = function() {
 	var data = {
