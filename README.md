@@ -1,5 +1,4 @@
-Save to App.net
-===============
+# Save to App.net
 
 Posts the current URL and title, with metadata annotation and PDF file attachment, to App.net.
 
@@ -7,7 +6,9 @@ Chrome extension => click button => extracts citation_* metadata => fetches PDF 
 
 *work in progress*
 
-TODO:
-Progress indicator
-Handle errors
-Notes + tags?
+## TODO
+
+ * [x] OAuth2 authentication
+ * [ ] Progress indicator
+ * [ ] Handle errors
+ * [ ] Notes + tags?
