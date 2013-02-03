@@ -12,3 +12,5 @@ Chrome extension => click button => extracts citation_* metadata => fetches PDF 
  * [ ] Progress indicator
  * [ ] Handle errors
  * [ ] Notes + tags?
+
+Icons CC-BY from https://account.app.net/legal/assets/

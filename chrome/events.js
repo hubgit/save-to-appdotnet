@@ -299,18 +299,19 @@ var getToken = function(callback) {
 
 /* ask the user to authenticate */
 var authenticate = function() {
-	var state = Math.random();
-	window.localStorage.setItem("appdotnet_state", state);
-	
-	var data = {
-		client_id: config.client_id,
-		response_type: "token",
-		redirect_uri: config.redirect_uri,
-		scope: "write_post",
-		state: state
-	};
+	var state = Math.random().toString();
 
-	window.open("https://account.app.net/oauth/authenticate?" + buildQueryString(data));
+	chrome.storage.local.set({ state: state }, function() {
+		var data = {
+			client_id: config.client_id,
+			response_type: "token",
+			redirect_uri: config.redirect_uri,
+			scope: "write_post",
+			state: state
+		};
+
+		chrome.tabs.create({ url: "https://account.app.net/oauth/authenticate?" + buildQueryString(data) });
+	});
 };
 
 /* when the toolbar button is clicked */
