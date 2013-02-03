@@ -24,9 +24,9 @@ body > * {
 }
 
 #articles {
-	-webkit-flex: 0.5;
-	-moz-flex: 0.5;
-	flex: 0.5;
+	-webkit-flex: 0.4;
+	-moz-flex: 0.4;
+	flex: 0.4;
 }
 
 #viewer {
