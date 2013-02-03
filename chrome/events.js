@@ -8,17 +8,63 @@ var config = {
 var execute = function() {
 	chrome.tabs.executeScript(null, { file: "extract.js" }, function(result) {
 		var itemData = result[0];
-		console.log(itemData);
+		console.log(["post-extract", itemData]);
 
 		getToken(function() {
-			if (itemData.pdf_url) {
-				fetchFile(itemData);
+			if (itemData.doi) {
+				fetchMetadata(itemData);
 			} else {
-				createPost(itemData, null);
+				handleData(itemData);				
 			}
 		});
 	});
 };
+
+var handleData = function(itemData) {
+	if (itemData.pdf_url) {
+		fetchFile(itemData);
+	} else {
+		createPost(itemData, null);
+	}
+};
+
+var fetchMetadata = function(itemData) {
+	var xhr = new XMLHttpRequest;
+	xhr.open("GET", "http://dx.doi.org/" + itemData.doi, true);
+	xhr.setRequestHeader("Accept", "application/json");
+	xhr.onload = function() {
+		var bib, metadata, field;
+
+		var keymap = {
+			"dc:title": "title",
+			"dc:creator": "author",
+			"prism:publicationDate": "date",
+		};
+
+		if (this.readyState == 4 && this.status == 200) {
+			bib = JSON.parse(this.response);
+
+			try {
+				metadata = bib.feed.entry["pam:message"]["pam:article"];
+
+				for (key in keymap) {
+					field = keymap[key];
+					if (metadata[key] && !itemData[field]) {
+						itemData[field] = metadata[key];
+					}
+				}
+			} catch (e) {}
+
+			console.log(["post-crossref", itemData]);
+
+			handleData(itemData);
+		}
+	};
+	xhr.onerror = function() {
+		handleData(itemData);
+	};
+	xhr.send();
+}
 
 var fetchFile = function(itemData) {
 	console.log("Fetching PDF: " + itemData.pdf_url);
@@ -27,8 +73,13 @@ var fetchFile = function(itemData) {
 	xhr.open("GET", itemData.pdf_url, true);
 	xhr.responseType = "arraybuffer";
 	xhr.onload = function() {
-		if (this.readyState == 4 && this.status == 200) {
-			createFile(this, itemData);
+		console.log(this);
+		if (this.readyState == 4) {
+			if (this.status == 200) {
+				createFile(this, itemData);
+			} else {
+				createPost(itemData, null);
+			}
 		}
 	};
 	xhr.onerror = function() {
@@ -81,6 +132,12 @@ var createFile = function(xhr, itemData) {
 
 var createPost = function(itemData, file) {
 	var title = itemData.title;
+
+	if (!title) {
+		title = itemData.document_title;
+	}
+
+	delete itemData.document_title;
 
 	if (title > 256) {
 		title = title.substr(0, 255 + "…");
@@ -184,7 +241,6 @@ var addEventListeners = function() {
 
 var getToken = function(callback) {
 	chrome.storage.sync.get("token", function(result) {
-		console.log(result);
 		if (result.token) {
 			config.token = result.token;
 			callback();

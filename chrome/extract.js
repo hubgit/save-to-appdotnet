@@ -43,6 +43,12 @@ var detectPDF = function() {
 	}
 };
 
+var detectDOI = function() {
+	var nodes = document.querySelectorAll("a[href^='http://dx.doi.org/']");
+
+	return nodes.length ? nodes.item(0).href.replace(/^http:\/\/dx\.doi\.org\//, "") : null;
+};
+
 var detectMeta = function() {
 	var data = {};
 
@@ -69,16 +75,18 @@ var detectMeta = function() {
 
 var data = detectMeta();
 
-if (!data.title) {
-	data.title = document.title;
-}
-
 data.url = document.location.href;
 data.pdf_url = absoluteURL(detectPDF());
+
+if (!data.doi) {
+	data.doi = detectDOI();
+}
 
 if (data.doi) {
 	data.doi = data.doi.replace(/^doi:/, "");
 }
+
+data.document_title = document.title;
 
 var selection = document.getSelection().toString();
 //data.quote = selection ? '"' + selection + '"' : "";
