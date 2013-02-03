@@ -22,10 +22,10 @@ var handleExtractedData = function(result) {
 	});
 
 	getToken(function() {
-		if (itemData.doi) {
-			fetchMetadata(itemData);
+		if (itemData.doi) { // TODO: always try Google Scholar first?
+			fetchCrossrefMetadata(itemData);
 		} else {
-			handleData(itemData);				
+			fetchScholarItem(itemData);
 		}
 	});
 };
@@ -39,8 +39,91 @@ var handleData = function(itemData) {
 	}
 };
 
+/* fetch metadata for this URL from Google Scholar */
+var fetchScholarItem = function(itemData) {
+	var params = { 
+		cluster: itemData.url,
+		output: "cite"
+	};
+
+	var xhr = new XMLHttpRequest;
+	xhr.open("GET", "http://scholar.google.co.uk/scholar?" + buildQueryString(params), true);
+	xhr.onload = function() {
+		if (this.readyState == 4 && this.status == 200) {
+			var dom = (new DOMParser()).parseFromHTMLString(this.response);
+			xhr.abort();
+
+			var nodes = dom.querySelectorAll("a.gs_citi[href^='/scholar.ris']");
+
+			if (!nodes.length) {
+				handleData(itemData);
+				return;
+			}
+
+			var href = nodes.item(0).getAttribute("href");
+
+			xhr.open("GET", "http://scholar.google.co.uk" + href, true);
+			xhr.onload = function() {
+				if (this.readyState == 4 && this.status == 200) {
+					addDataFromRIS(this.response, itemData);
+				}
+			};
+			xhr.send();
+		}
+	};
+	xhr.onerror = function() {
+		handleData(itemData);
+	};
+	xhr.send();
+};
+
+/* parse the RIS file and add missing data */
+var addDataFromRIS = function(ris, itemData) {
+	var keymap = {
+		"T1": "title",
+		"A1": "author",
+		"VL": "volume",
+		"IS": "issue",
+		"Y1": "year",
+		"JO": "journal_title"
+	};
+
+	var lines = ris.split(/\n/);
+
+	var data = {};
+
+	lines.forEach(function(line) {
+		var parts = line.split(/  - /);
+		var key = parts[0];
+		var value = parts[1];
+
+		if (data[key]) {
+			if (typeof data[key] == "string") {
+				data[key] = [data[key]];
+			}
+			data[key].push(value);
+		} else {
+			data[key] = value;
+		}
+	});
+
+	for (var key in data) {
+		if (data.hasOwnProperty(key)) {
+			var field = keymap[key];
+			var value = data[key];
+
+			if (field && value && !itemData[field]) {
+				itemData[field] = value;
+			}
+
+		}
+	}
+
+	handleData(itemData);
+};
+
 /* fetch metadata for this DOI from CrossRef */
-var fetchMetadata = function(itemData) {
+var fetchCrossrefMetadata = function(itemData) {
 	var xhr = new XMLHttpRequest;
 	xhr.open("GET", "http://dx.doi.org/" + itemData.doi, true);
 	xhr.setRequestHeader("Accept", "application/json");
@@ -258,6 +341,22 @@ var handleXHRError = function(event){
 	console.log(["error", event]);
 	// TODO: authenticate if error code is 401
 };
+
+/* parse HTML to a DOM Document */
+DOMParser.prototype.parseFromHTMLString = function(html, type) {  
+	var doc = document.implementation.createHTMLDocument("");
+	
+	var docElement = doc.documentElement;
+	docElement.innerHTML = html;
+	
+	var firstChild = docElement.firstElementChild;
+
+	if (docElement.childElementCount === 1 && firstChild.localName.toLowerCase() === "html") {  
+		doc.replaceChild(firstChild, docElement);  
+	}  
+
+	return doc; 
+}; 
 
 /* convert an object into a URL-encoded query string */
 var buildQueryString = function(items) {
