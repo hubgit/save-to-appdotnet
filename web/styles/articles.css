@@ -1,0 +1,61 @@
+#articles {
+	border-right: 1px solid #ccc;
+}
+
+.article {
+	background: #eee;
+	font-size: 13px;
+	padding: 5px 10px;
+	cursor: pointer;
+	
+	overflow-y: auto; /* to clear floats */
+	overflow-x: hidden;
+	
+	border-top: 1px solid #f6f6f6;
+	border-bottom: 1px solid #ccc;
+		
+	transition-property: background-color; -webkit-transition-property: background-color; -moz-transition-property: background-color;   
+	transition-duration: 0.1s; -webkit-transition-duration: 0.1s; -moz-transition-duration: 0.1s;
+	transition-timing-function: ease-out; -webkit-transition-timing-function: ease-out; -moz-transition-timing-function: ease-out;
+}
+
+.article:hover {
+	background: #f6f6f6;
+}
+
+.article.active {
+  background-color: #ccc;
+  border-top: 1px solid #bbb;
+}
+
+.article [itemprop=name] {
+	font-size: 100%;
+	margin: 0;
+	font-weight: bold;
+	text-shadow: 0 1px 1px rgba(255,255,255,0.5);
+	margin-bottom: 2px;
+}
+
+.article.active [itemprop=name] {
+  color: #00438A;
+}
+
+.article [itemprop=datePublished] {
+  float: right;
+  color: #777;
+  margin-left: 2rem;
+}
+
+.article [itemprop=author] {
+	color: #777;
+	display: inline-block;
+	white-space: nowrap;
+	max-width: 100%;
+	overflow-x: hidden;
+	text-overflow: ellipsis;
+	vertical-align: text-bottom; /* https://bugzilla.mozilla.org/show_bug.cgi?id=491549 */
+}
+
+.article [itemprop=author]:not(:last-of-type):after {
+	content: ", ";
+}

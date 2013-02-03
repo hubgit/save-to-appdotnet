@@ -5,21 +5,32 @@ var config = {
 	token: null,
 };
 
+/* execute extract.js in the current tab and handle the result */
 var execute = function() {
-	chrome.tabs.executeScript(null, { file: "extract.js" }, function(result) {
-		var itemData = result[0];
-		console.log(["post-extract", itemData]);
+	chrome.tabs.executeScript(null, { file: "extract.js" }, handleExtractedData);
+};
 
-		getToken(function() {
-			if (itemData.doi) {
-				fetchMetadata(itemData);
-			} else {
-				handleData(itemData);				
-			}
-		});
+/* load the oauth access token and handle the extracted data */
+var handleExtractedData = function(result) {
+	var itemData = result[0];
+	console.log(itemData);
+
+	showNotification({
+		title: "Extracting metadata", 
+		text: itemData.title, 
+		lifespan: 1000
+	});
+
+	getToken(function() {
+		if (itemData.doi) {
+			fetchMetadata(itemData);
+		} else {
+			handleData(itemData);				
+		}
 	});
 };
 
+/* decide whether to fetch the file */
 var handleData = function(itemData) {
 	if (itemData.pdf_url) {
 		fetchFile(itemData);
@@ -28,6 +39,7 @@ var handleData = function(itemData) {
 	}
 };
 
+/* fetch metadata for this DOI from CrossRef */
 var fetchMetadata = function(itemData) {
 	var xhr = new XMLHttpRequest;
 	xhr.open("GET", "http://dx.doi.org/" + itemData.doi, true);
@@ -55,8 +67,6 @@ var fetchMetadata = function(itemData) {
 				}
 			} catch (e) {}
 
-			console.log(["post-crossref", itemData]);
-
 			handleData(itemData);
 		}
 	};
@@ -66,15 +76,22 @@ var fetchMetadata = function(itemData) {
 	xhr.send();
 }
 
+/* fetch the file */
 var fetchFile = function(itemData) {
 	console.log("Fetching PDF: " + itemData.pdf_url);
+
+	var notification = showNotification({
+		title: "Fetching PDF file",
+		text: "", 
+	});
 
 	var xhr = new XMLHttpRequest;
 	xhr.open("GET", itemData.pdf_url, true);
 	xhr.responseType = "arraybuffer";
 	xhr.onload = function() {
-		console.log(this);
 		if (this.readyState == 4) {
+			notification.cancel();
+
 			if (this.status == 200) {
 				createFile(this, itemData);
 			} else {
@@ -88,6 +105,7 @@ var fetchFile = function(itemData) {
 	xhr.send();
 };
 
+/* create the File object in App.net */
 var createFile = function(xhr, itemData) {
 	var contentType = xhr.getResponseHeader("Content-Type").split(/\s*;\s*/)[0];
 	var contentLength = xhr.getResponseHeader("Content-Length");
@@ -103,6 +121,11 @@ var createFile = function(xhr, itemData) {
 			return;
 		}
 	}
+
+	var notification = showNotification({
+		title: "Saving file to App.net", 
+		text: ""
+	});
 
 	var formData = new FormData;
 
@@ -130,6 +153,7 @@ var createFile = function(xhr, itemData) {
 	xhr.send(formData);
 };
 
+/* create the Post object in App.net */
 var createPost = function(itemData, file) {
 	var title = itemData.title;
 
@@ -186,24 +210,56 @@ var createPost = function(itemData, file) {
 	xhr.onload = function() {
 		if (this.readyState == 4 && this.status == 200) {
 			var response = JSON.parse(this.response);
-			showPost(response.data);
+			postCreated(response.data);
 		}
 	};
 	xhr.onerror = handleXHRError;
 	xhr.send(JSON.stringify(data));
 };
 
-var showPost = function(data) {
-		console.log(data);
-		console.log("Created post: " + data.canonical_url);
-		window.open(data.canonical_url);
+/* notify when the post has been successfully created */
+var postCreated = function(data) {
+	console.log(data);
+	console.log("Created post: " + data.canonical_url);
+	//window.open(data.canonical_url);
+
+	var notification = showNotification({
+		title: "Saved to App.net", 
+		text: "Click to view the post", 
+		lifespan: 10000
+	});
+
+	notification.addEventListener("click", function() {
+		chrome.tabs.create({ url: data.canonical_url });
+	});
 };
 
+/* show a desktop notification */
+var showNotification = function(options) {
+	var notification = webkitNotifications.createNotification(
+		"img/icon48.png",
+		options.title,
+		options.text
+	);
+
+	notification.show();
+
+	if (options.lifespan) {
+		window.setTimeout(function() {
+			notification.cancel();
+		}, options.lifespan);
+	}
+
+	return notification;
+};
+
+/* handle XHR errors */
 var handleXHRError = function(event){
 	console.log(["error", event]);
-	// TODO: authenticate if error code is 403
+	// TODO: authenticate if error code is 401
 };
 
+/* convert an object into a URL-encoded query string */
 var buildQueryString = function(items) {
 	var parts = [];
 
@@ -229,16 +285,7 @@ var buildQueryString = function(items) {
 	return parts.length ? parts.join("&").replace(/%20/g, "+") : "";
 };
 
-var addEventListeners = function() {
-	/* when the toolbar button is clicked */
-	chrome.browserAction.onClicked.addListener(execute);
-
-	/* when the keyboard shortcut is pressed */
-	chrome.commands.onCommand.addListener(function(command) {
-	  if (command == "save") execute();
-	});
-};
-
+/* load the access token from storage */
 var getToken = function(callback) {
 	chrome.storage.sync.get("token", function(result) {
 		if (result.token) {
@@ -250,17 +297,21 @@ var getToken = function(callback) {
 	});
 };
 
-
+/* ask the user to authenticate */
 var authenticate = function() {
+	var state = Math.random();
+	window.localStorage.setItem("appdotnet_state", state);
+	
 	var data = {
 		client_id: config.client_id,
 		response_type: "token",
 		redirect_uri: config.redirect_uri,
 		scope: "write_post",
-		//state: config.state
+		state: state
 	};
 
 	window.open("https://account.app.net/oauth/authenticate?" + buildQueryString(data));
 };
 
-addEventListeners();
+/* when the toolbar button is clicked */
+chrome.browserAction.onClicked.addListener(execute);

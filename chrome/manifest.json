@@ -1,41 +1,36 @@
 {
-   "background": {
-      "persistent": false,
-      "scripts": [ "events.js" ]
-   },
-   "browser_action": {
-      "default_icon": "img/icon16.png",
-      "default_title": "Save the current page to app.net"
-   },
-   "commands": {
-      "save": {
-         "description": "Save the current page to app.net",
-         "suggested_key": {
-            "default": "Alt+A"
-         }
-      }
-   },
-   "description": "Save the current page to app.net",
-   "icons": {
-      "128": "img/icon128.png",
-      "16": "img/icon16.png",
-      "48": "img/icon48.png"
-   },
-   "manifest_version": 2,
-   "name": "Save to app.net",
-   "permissions": [ 
-      "tabs", 
-      "http://*/*", 
-      "https://*/*", 
-      "storage",
-      "experimental"
-   ],
-   "version": "0.1",
-   "content_scripts": [
-     {
-       "matches": ["http://bitly.com/robots.txt"],
-       "js": ["oauth.js"],
-       "run_at": "document_start"
-     }
-   ]
+	"manifest_version": 2,
+	"name": "Save to App.net",
+	"description": "Save the current page to App.net",
+	"version": "0.1",
+	"background": {
+		"persistent": false,
+		"scripts": [
+			"events.js"
+		]
+	},
+	"browser_action": {
+		"default_icon": "img/icon16.png",
+		"default_title": "Save the current page to App.net"
+	},
+	"icons": {
+		"128": "img/icon128.png",
+		"16": "img/icon16.png",
+		"48": "img/icon48.png"
+	},
+	"web_accessible_resources": [
+		"img/icon48.png"
+	],
+	"permissions": [
+		"tabs",
+		"storage",
+		"notifications",
+		"http://*/*",
+		"https://*/*"
+	],
+	"content_scripts": [{
+			"matches": ["http://bitly.com/robots.txt"],
+			"js": ["oauth.js"],
+			"run_at": "document_start"
+	}]
 }
