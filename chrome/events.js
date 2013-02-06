@@ -47,28 +47,32 @@ var fetchScholarItem = function(itemData) {
 	};
 
 	var xhr = new XMLHttpRequest();
-	xhr.open("GET", "http://scholar.google.co.uk/scholar?" + buildQueryString(params), true);
+	xhr.open("GET", "http://scholar.google.co.uk/scholar?" + buildQueryString(params));
 	xhr.onload = function() {
-		if (this.readyState == 4 && this.status == 200) {
-			var dom = (new DOMParser()).parseFromHTMLString(this.response);
-			xhr.abort();
+		if (this.readyState == 4) {
+			if (this.status == 200) {
+				var dom = (new DOMParser()).parseFromHTMLString(this.response);
+				xhr.abort();
 
-			var nodes = dom.querySelectorAll("a.gs_citi[href^='/scholar.ris']");
+				var nodes = dom.querySelectorAll("a.gs_citi[href^='/scholar.ris']");
 
-			if (!nodes.length) {
-				handleData(itemData);
-				return;
-			}
-
-			var href = nodes.item(0).getAttribute("href");
-
-			xhr.open("GET", "http://scholar.google.co.uk" + href, true);
-			xhr.onload = function() {
-				if (this.readyState == 4 && this.status == 200) {
-					addDataFromRIS(this.response, itemData);
+				if (!nodes.length) {
+					handleData(itemData);
+					return;
 				}
-			};
-			xhr.send();
+
+				var href = nodes.item(0).getAttribute("href");
+
+				xhr.open("GET", "http://scholar.google.co.uk" + href);
+				xhr.onload = function() {
+					if (this.readyState == 4 && this.status == 200) {
+						addDataFromRIS(this.response, itemData);
+					}
+				};
+				xhr.send();
+			} else {
+				handleData(itemData);
+			}
 		}
 	};
 	xhr.onerror = function() {
@@ -125,7 +129,7 @@ var addDataFromRIS = function(ris, itemData) {
 /* fetch metadata for this DOI from CrossRef */
 var fetchCrossrefMetadata = function(itemData) {
 	var xhr = new XMLHttpRequest();
-	xhr.open("GET", "http://dx.doi.org/" + itemData.doi, true);
+	xhr.open("GET", "http://data.crossref.org/" + itemData.doi + "?_=" + Math.random());
 	xhr.setRequestHeader("Accept", "application/json");
 	xhr.onload = function() {
 		var bib, metadata, field;
@@ -136,20 +140,22 @@ var fetchCrossrefMetadata = function(itemData) {
 			"prism:publicationDate": "date"
 		};
 
-		if (this.readyState == 4 && this.status == 200) {
-			bib = JSON.parse(this.response);
+		if (this.readyState == 4) {
+			if (this.status == 200) {
+				bib = JSON.parse(this.response);
 
-			try {
-				metadata = bib.feed.entry["pam:message"]["pam:article"];
+				try {
+					metadata = bib.feed.entry["pam:message"]["pam:article"];
 
-				for (key in keymap) {
-					field = keymap[key];
-					if (metadata[key] && !itemData[field]) {
-						itemData[field] = metadata[key];
+					for (key in keymap) {
+						field = keymap[key];
+						if (metadata[key] && !itemData[field]) {
+							itemData[field] = metadata[key];
+						}
 					}
-				}
-			} catch (e) {}
-
+				} catch (e) {}
+			}
+			
 			handleData(itemData);
 		}
 	};
@@ -169,7 +175,7 @@ var fetchFile = function(itemData) {
 	});
 
 	var xhr = new XMLHttpRequest();
-	xhr.open("GET", itemData.pdf_url, true);
+	xhr.open("GET", itemData.pdf_url);
 	xhr.responseType = "arraybuffer";
 	xhr.onload = function() {
 		if (this.readyState == 4) {
@@ -220,16 +226,18 @@ var createFile = function(xhr, itemData) {
 	formData.append("metadata", blob, "metadata.json");
 
 	xhr = new XMLHttpRequest();
-	xhr.open("POST", "https://alpha-api.app.net/stream/0/files", true);
+	xhr.open("POST", "https://alpha-api.app.net/stream/0/files");
 	xhr.setRequestHeader("Authorization", "Bearer " + config.token);
 	xhr.onload = function() {
-		if (this.readyState == 4 && this.status == 200) {
-			var response = JSON.parse(this.response);
+		if (this.readyState == 4) {
+			if (this.status == 200) {
+				var response = JSON.parse(this.response);
 
-			createPost(itemData, {
-				id: response.data.id,
-				token: response.data.file_token
-			});
+				createPost(itemData, {
+					id: response.data.id,
+					token: response.data.file_token
+				});
+			}
 		}
 	};
 	xhr.onerror = handleXHRError;
@@ -287,13 +295,15 @@ var createPost = function(itemData, file) {
 	console.log(data);
 	
 	var xhr = new XMLHttpRequest();
-	xhr.open("POST", "https://alpha-api.app.net/stream/0/posts?include_post_annotations=1", true);
+	xhr.open("POST", "https://alpha-api.app.net/stream/0/posts?include_post_annotations=1");
 	xhr.setRequestHeader("Content-Type", "application/json; charset=utf-8");
 	xhr.setRequestHeader("Authorization", "Bearer " + config.token);
 	xhr.onload = function() {
-		if (this.readyState == 4 && this.status == 200) {
-			var response = JSON.parse(this.response);
-			postCreated(response.data);
+		if (this.readyState == 4) {
+			if (this.status == 200) {
+				var response = JSON.parse(this.response);
+				postCreated(response.data);
+			}
 		}
 	};
 	xhr.onerror = handleXHRError;
