@@ -1,4 +1,4 @@
-//PDFJS.workerSrc = "scripts/vendor/pdf.js";
+PDFJS.workerSrc = "vendor/pdf.js";
 
 $(function() {
 	new Views.Articles({
