@@ -4,4 +4,6 @@ $(function() {
 	});
 
 	new Views.Viewer({});
+
+	Files.init();
 });

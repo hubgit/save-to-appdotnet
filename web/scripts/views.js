@@ -15,11 +15,20 @@ var Views = {
 		},
 
 		add: function(item) {
-			if (item.get("file").url && item.get("article").title) {
+			var file = item.get("file");
+			var article = item.get("article");
+
+			if (file.url && article.title) {
 				var view = new Views.Article({ model: item });
 				this.$el.append(view.render().el);
+
+				Files.getFileURL(file, function(url) {
+					console.log(url);
+					item.set("blob", url);
+				});
 			}
-		}
+		},
+
 	}),
 
 	Article: Backbone.View.extend({
@@ -44,11 +53,12 @@ var Views = {
 		showFile: function() {
 			this.$el.addClass("active").siblings(".active").removeClass("active");
 
-			var file = this.model.get("file");
-			console.log(file.url);
+			//var url = this.model.get("blob") || this.model.get("file").url;
+			var url = this.model.get("file").url;
+			console.log(url);
 
 			$("#viewer").attr({ 
-				src: "http://mozilla.github.com/pdf.js/web/viewer.html?" + $.param({ file: file.url }), 
+				src: "viewer.html?" + $.param({ file: url }), 
 			});
 		}
 	}),
