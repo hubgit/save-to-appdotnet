@@ -24,7 +24,7 @@ var detectPDF = function() {
 		return nodes[0].getAttribute("content");
 	}
 
-	var nodes = document.querySelectorAll("a[href]");
+	nodes = document.querySelectorAll("a[href]");
 
 	[/\.pdf$/i, /\.pdf/i, /pdf/i].forEach(function(re) {
 		for (var i = 0; i < nodes.length; i++) {

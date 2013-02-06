@@ -2,7 +2,7 @@ var config = {
 	client_id: "8rpu34tDFqbAmkmJhPYkSCkDFg2vc7XT",
 	redirect_uri: "http://bitly.com/robots.txt",
 	//state: "", // TODO
-	token: null,
+	token: null
 };
 
 /* execute extract.js in the current tab and handle the result */
@@ -46,7 +46,7 @@ var fetchScholarItem = function(itemData) {
 		output: "cite"
 	};
 
-	var xhr = new XMLHttpRequest;
+	var xhr = new XMLHttpRequest();
 	xhr.open("GET", "http://scholar.google.co.uk/scholar?" + buildQueryString(params), true);
 	xhr.onload = function() {
 		if (this.readyState == 4 && this.status == 200) {
@@ -93,7 +93,7 @@ var addDataFromRIS = function(ris, itemData) {
 	var data = {};
 
 	lines.forEach(function(line) {
-		var parts = line.split(/  - /);
+		var parts = line.split(/ {2}- /);
 		var key = parts[0];
 		var value = parts[1];
 
@@ -124,7 +124,7 @@ var addDataFromRIS = function(ris, itemData) {
 
 /* fetch metadata for this DOI from CrossRef */
 var fetchCrossrefMetadata = function(itemData) {
-	var xhr = new XMLHttpRequest;
+	var xhr = new XMLHttpRequest();
 	xhr.open("GET", "http://dx.doi.org/" + itemData.doi, true);
 	xhr.setRequestHeader("Accept", "application/json");
 	xhr.onload = function() {
@@ -133,7 +133,7 @@ var fetchCrossrefMetadata = function(itemData) {
 		var keymap = {
 			"dc:title": "title",
 			"dc:creator": "author",
-			"prism:publicationDate": "date",
+			"prism:publicationDate": "date"
 		};
 
 		if (this.readyState == 4 && this.status == 200) {
@@ -157,7 +157,7 @@ var fetchCrossrefMetadata = function(itemData) {
 		handleData(itemData);
 	};
 	xhr.send();
-}
+};
 
 /* fetch the file */
 var fetchFile = function(itemData) {
@@ -165,10 +165,10 @@ var fetchFile = function(itemData) {
 
 	var notification = showNotification({
 		title: "Fetching PDF file",
-		text: "", 
+		text: ""
 	});
 
-	var xhr = new XMLHttpRequest;
+	var xhr = new XMLHttpRequest();
 	xhr.open("GET", itemData.pdf_url, true);
 	xhr.responseType = "arraybuffer";
 	xhr.onload = function() {
@@ -210,16 +210,16 @@ var createFile = function(xhr, itemData) {
 		text: ""
 	});
 
-	var formData = new FormData;
+	var formData = new FormData();
 
 	var dataView = new DataView(xhr.response);
 	var blob = new Blob([dataView], { type: contentType });
 	formData.append("content", blob, "article.pdf");
 
-	var blob = new Blob([JSON.stringify({ type: "com.adobe.pdf" })], { type: "application/json" });
+	blob = new Blob([JSON.stringify({ type: "com.adobe.pdf" })], { type: "application/json" });
 	formData.append("metadata", blob, "metadata.json");
 
-	var xhr = new XMLHttpRequest;
+	xhr = new XMLHttpRequest();
 	xhr.open("POST", "https://alpha-api.app.net/stream/0/files", true);
 	xhr.setRequestHeader("Authorization", "Bearer " + config.token);
 	xhr.onload = function() {
@@ -279,14 +279,14 @@ var createPost = function(itemData, file) {
 						"file_token": file.token,
 						"format": "metadata" // ?
 					}
-				],
+				]
 			}
 		});
 	}
 
 	console.log(data);
 	
-	var xhr = new XMLHttpRequest;
+	var xhr = new XMLHttpRequest();
 	xhr.open("POST", "https://alpha-api.app.net/stream/0/posts?include_post_annotations=1", true);
 	xhr.setRequestHeader("Content-Type", "application/json; charset=utf-8");
 	xhr.setRequestHeader("Authorization", "Bearer " + config.token);
@@ -364,7 +364,7 @@ var buildQueryString = function(items) {
 
 	var add = function(key, value) {
 		parts.push(encodeURIComponent(key) + "=" + encodeURIComponent(value));
-	}
+	};
 
 	for (var key in items) {
 		if (!items.hasOwnProperty(key)) continue;
