@@ -2,7 +2,7 @@
 	"manifest_version": 2,
 	"name": "Save to App.net",
 	"description": "Save the current page to App.net",
-	"version": "0.1",
+	"version": "0.2",
 	"background": {
 		"persistent": false,
 		"scripts": [
@@ -22,7 +22,7 @@
 		"img/icon48.png"
 	],
 	"permissions": [
-		"tabs",
+		"activeTab",
 		"storage",
 		"notifications",
 		"http://*/*",
