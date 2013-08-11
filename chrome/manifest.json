@@ -29,7 +29,7 @@
 		"https://*/*"
 	],
 	"content_scripts": [{
-		"matches": ["http://bitly.com/robots.txt*"],
+		"matches": ["https://bitly.com/robots.txt*"],
 		"js": ["oauth.js"],
 		"run_at": "document_start"
 	}]
