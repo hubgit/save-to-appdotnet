@@ -1,6 +1,6 @@
 var config = {
 	client_id: "8rpu34tDFqbAmkmJhPYkSCkDFg2vc7XT",
-	redirect_uri: "http://bitly.com/robots.txt",
+	redirect_uri: "https://bitly.com/robots.txt",
 	//state: "", // TODO
 	token: null
 };
